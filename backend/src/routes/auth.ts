@@ -7,6 +7,9 @@ import { verifyToken, AuthenticatedRequest } from '../middleware/auth.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'rakshak-super-secret-key-12345';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.warn('⚠️ [SECURITY WARNING]: JWT_SECRET environment variable is not defined in production! Ensure a cryptographically secure key is set.');
+}
 const SESSION_EXPIRY_DAYS = 7;
 
 // Login Endpoint

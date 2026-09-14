@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import prisma from '../db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'rakshak-super-secret-key-12345';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.warn('⚠️ [SECURITY WARNING]: JWT_SECRET environment variable is not defined in production! Ensure a cryptographically secure key is set.');
+}
 
 // Define custom Request properties for TypeScript
 export interface AuthenticatedRequest extends Request {
