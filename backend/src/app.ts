@@ -6,6 +6,9 @@ import incidentsRouter from './routes/incidents.js';
 import webhookRouter from './routes/webhook.js';
 import passportRouter from './routes/passport.js';
 import { verifyToken, requireRole } from './middleware/auth.js';
+import { authRateLimiter, apiRateLimiter } from './middleware/rateLimiter.js';
+import { sanitizeRequestBody } from './middleware/validateRequest.js';
+import { PhishGuardService } from './services/phishGuardService.js';
 
 const app = reportApp();
 
@@ -14,12 +17,33 @@ function reportApp() {
 
   expressApp.use(cors());
   expressApp.use(express.json());
+  expressApp.use(sanitizeRequestBody);
+  expressApp.use('/api', apiRateLimiter);
 
   // Public Auth, Incidents, Webhook & Passport Verification Routes
-  expressApp.use('/api/auth', authRouter);
+  expressApp.use('/api/auth', authRateLimiter, authRouter);
   expressApp.use('/api/incidents', incidentsRouter);
   expressApp.use('/api/webhook', webhookRouter);
   expressApp.use('/api/passport', passportRouter);
+
+  // PhishGuard Threat Analysis (Public Security Diagnostic)
+  expressApp.post('/api/security/phishguard', async (req, res) => {
+    const { url, payload } = req.body || {};
+    if (!url && !payload) {
+      return res.status(400).json({ error: 'Please provide either a "url" or "payload" parameter to analyze.' });
+    }
+
+    const urlAnalysis = url ? PhishGuardService.analyzeUrl(url) : null;
+    const payloadAnalysis = payload ? PhishGuardService.scanPayload(payload) : null;
+
+    res.json({
+      service: 'PhishGuard AI Threat Intelligence',
+      status: 'PROCESSED',
+      timestamp: new Date().toISOString(),
+      urlResult: urlAnalysis,
+      payloadResult: payloadAnalysis,
+    });
+  });
 
   // Health Check (Public)
   expressApp.get('/api/health', async (req, res) => {
