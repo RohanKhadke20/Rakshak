@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String?
+  role      String    @default("NODE_OPERATOR") // e.g. NODE_OPERATOR, POLICE, HOSPITAL_ADMIN
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sessions  Session[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+model Node {
+  id           String   @id @default(uuid())
+  name         String
+  ipAddress    String
+  status       String   @default("ONLINE") // e.g. ONLINE, OFFLINE, WARNING
+  cpuUsage     Float    @default(0.0)
+  ramUsage     Float    @default(0.0)
+  storageUsage Float    @default(0.0)
+  lastPing     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  alerts       Alert[]
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  severity  String   @default("INFO") // e.g. INFO, WARNING, CRITICAL
+  message   String
+  resolved  Boolean  @default(false)
+  nodeId    String
+  node      Node     @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- EMERGENCY NETWORK MODELS ---
+
+model ResponseNode {
+  id        String   @id @default(uuid())
+  name      String
+  latitude  Float
+  longitude Float
+  status    String   @default("ACTIVE") // e.g. ACTIVE, INACTIVE
+  contact   String
+  nodeType  String   // e.g. POLICE, HOSPITAL, FIRE_STATION
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Incident {
+  id                       String                    @id @default(uuid())
+  latitude                 Float
+  longitude                Float
+  status                   String                    @default("REPORTED") // e.g. REPORTED, RESPONDING, RESOLVED
+  reporterPhone            String
+  details                  String
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  goodSamaritanCertificate GoodSamaritanCertificate?
+}
+
+model GoodSamaritanCertificate {
+  id         String   @id @default(uuid())
+  hash       String   @unique
+  issuedTo   String
+  incidentId String   @unique
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  timestamp  DateTime @default(now())
+}
